@@ -178,13 +178,19 @@ specialForms.fun = (args, scope) => {
 
 //---------------------------------------------------
 
-// Modify these definitions...
+// ------------ EXERCISE 1 ---------------
 
-topScope.array = "...";
+topScope.array = function (...a) {
+  return a;
+};
 
-topScope.length = "...";
+topScope.length = function (a) {
+  return a.length;
+};
 
-topScope.element = "...";
+topScope.element = function (arr, i) {
+  return arr[i];
+};
 
 run(`
 do(define(sum, fun(array,
@@ -197,3 +203,18 @@ do(define(sum, fun(array,
    print(sum(array(1, 2, 3))))
 `);
 // → 6
+
+// -------------- EXERCISE 2 -----------------
+
+run(`
+  do(define(f, fun(a, fun(b, +(a, b)))),
+     print(f(4)(5)))
+  `);
+// → 9
+
+// Closure is achieved by setting the prototype of let localScope = Object.create(scope);
+// in the fun() definition. This means that each time the function is called,
+// it creates a new local scope that can access variables from the outer scope
+// via the prototype chain.
+
+// --------------- EXERCISE 3 --------------------
