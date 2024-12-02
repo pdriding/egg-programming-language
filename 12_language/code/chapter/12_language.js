@@ -1,12 +1,14 @@
+// ------------ PARSER --------------
+
 function parseExpression(program) {
   program = skipSpace(program);
   let match, expr;
-  if (match = /^"([^"]*)"/.exec(program)) {
-    expr = {type: "value", value: match[1]};
-  } else if (match = /^\d+\b/.exec(program)) {
-    expr = {type: "value", value: Number(match[0])};
-  } else if (match = /^[^\s(),#"]+/.exec(program)) {
-    expr = {type: "word", name: match[0]};
+  if ((match = /^"([^"]*)"/.exec(program))) {
+    expr = { type: "value", value: match[1] };
+  } else if ((match = /^\d+\b/.exec(program))) {
+    expr = { type: "value", value: Number(match[0]) };
+  } else if ((match = /^[^\s(),#"]+/.exec(program))) {
+    expr = { type: "word", name: match[0] };
   } else {
     throw new SyntaxError("Unexpected syntax: " + program);
   }
@@ -23,11 +25,11 @@ function skipSpace(string) {
 function parseApply(expr, program) {
   program = skipSpace(program);
   if (program[0] != "(") {
-    return {expr: expr, rest: program};
+    return { expr: expr, rest: program };
   }
 
   program = skipSpace(program.slice(1));
-  expr = {type: "apply", operator: expr, args: []};
+  expr = { type: "apply", operator: expr, args: [] };
   while (program[0] != ")") {
     let arg = parseExpression(program);
     expr.args.push(arg.expr);
@@ -42,7 +44,7 @@ function parseApply(expr, program) {
 }
 
 function parse(program) {
-  let {expr, rest} = parseExpression(program);
+  let { expr, rest } = parseExpression(program);
   if (skipSpace(rest).length > 0) {
     throw new SyntaxError("Unexpected text after program");
   }
@@ -52,7 +54,11 @@ function parse(program) {
 //    args: [{type: "word", name: "a"},
 //           {type: "value", value: 10}]}
 
+// ----------- EVALUATOR ---------------------
+
 var specialForms = Object.create(null);
+
+// This is the interpreter
 
 function evaluate(expr, scope) {
   if (expr.type == "value") {
@@ -61,24 +67,24 @@ function evaluate(expr, scope) {
     if (expr.name in scope) {
       return scope[expr.name];
     } else {
-      throw new ReferenceError(
-        `Undefined binding: ${expr.name}`);
+      throw new ReferenceError(`Undefined binding: ${expr.name}`);
     }
   } else if (expr.type == "apply") {
-    let {operator, args} = expr;
-    if (operator.type == "word" &&
-        operator.name in specialForms) {
+    let { operator, args } = expr;
+    if (operator.type == "word" && operator.name in specialForms) {
       return specialForms[operator.name](expr.args, scope);
     } else {
       let op = evaluate(operator, scope);
       if (typeof op == "function") {
-        return op(...args.map(arg => evaluate(arg, scope)));
+        return op(...args.map((arg) => evaluate(arg, scope)));
       } else {
         throw new TypeError("Applying a non-function.");
       }
     }
   }
 }
+
+// ------------- SPECIAL FORMS -------------------
 
 specialForms.if = (args, scope) => {
   if (args.length != 3) {
@@ -120,6 +126,10 @@ specialForms.define = (args, scope) => {
   return value;
 };
 
+// ------------- THE ENVIROMENT ----------------
+
+// (top scope = the global scope)
+
 var topScope = Object.create(null);
 
 topScope.true = true;
@@ -129,28 +139,32 @@ for (let op of ["+", "-", "*", "/", "==", "<", ">"]) {
   topScope[op] = Function("a, b", `return a ${op} b;`);
 }
 
-topScope.print = value => {
+topScope.print = (value) => {
   console.log(value);
   return value;
 };
 
+// Runs program and creates new scope inherited from topScope
+
 function run(program) {
   return evaluate(parse(program), Object.create(topScope));
 }
+
+// -------------- FUNCTIONS -----------------
 
 specialForms.fun = (args, scope) => {
   if (!args.length) {
     throw new SyntaxError("Functions need a body");
   }
   let body = args[args.length - 1];
-  let params = args.slice(0, args.length - 1).map(expr => {
+  let params = args.slice(0, args.length - 1).map((expr) => {
     if (expr.type != "word") {
       throw new SyntaxError("Parameter names must be words");
     }
     return expr.name;
   });
 
-  return function(...args) {
+  return function (...args) {
     if (args.length != params.length) {
       throw new TypeError("Wrong number of arguments");
     }
@@ -161,3 +175,25 @@ specialForms.fun = (args, scope) => {
     return evaluate(body, localScope);
   };
 };
+
+//---------------------------------------------------
+
+// Modify these definitions...
+
+topScope.array = "...";
+
+topScope.length = "...";
+
+topScope.element = "...";
+
+run(`
+do(define(sum, fun(array,
+     do(define(i, 0),
+        define(sum, 0),
+        while(<(i, length(array)),
+          do(define(sum, +(sum, element(array, i))),
+             define(i, +(i, 1)))),
+        sum))),
+   print(sum(array(1, 2, 3))))
+`);
+// → 6
