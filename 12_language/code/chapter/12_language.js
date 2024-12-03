@@ -16,11 +16,11 @@ function parseExpression(program) {
   return parseApply(expr, program.slice(match[0].length));
 }
 
-function skipSpace(string) {
-  let first = string.search(/\S/);
-  if (first == -1) return "";
-  return string.slice(first);
-}
+// function skipSpace(string) {
+//   let first = string.search(/\S/);
+//   if (first == -1) return "";
+//   return string.slice(first);
+// }
 
 function parseApply(expr, program) {
   program = skipSpace(program);
@@ -192,24 +192,24 @@ topScope.element = function (arr, i) {
   return arr[i];
 };
 
-run(`
-do(define(sum, fun(array,
-     do(define(i, 0),
-        define(sum, 0),
-        while(<(i, length(array)),
-          do(define(sum, +(sum, element(array, i))),
-             define(i, +(i, 1)))),
-        sum))),
-   print(sum(array(1, 2, 3))))
-`);
+// run(`
+// do(define(sum, fun(array,
+//      do(define(i, 0),
+//         define(sum, 0),
+//         while(<(i, length(array)),
+//           do(define(sum, +(sum, element(array, i))),
+//              define(i, +(i, 1)))),
+//         sum))),
+//    print(sum(array(1, 2, 3))))
+// `);
 // → 6
 
 // -------------- EXERCISE 2 -----------------
 
-run(`
-  do(define(f, fun(a, fun(b, +(a, b)))),
-     print(f(4)(5)))
-  `);
+// run(`
+//   do(define(f, fun(a, fun(b, +(a, b)))),
+//      print(f(4)(5)))
+//   `);
 // → 9
 
 // Closure is achieved by setting the prototype of let localScope = Object.create(scope);
@@ -218,3 +218,35 @@ run(`
 // via the prototype chain.
 
 // --------------- EXERCISE 3 --------------------
+
+// Adding comments
+
+// (From the parser)
+
+// Their version
+function skipSpace(string) {
+  let skippable = string.match(/^(\s|#.*)*/);
+  return string.slice(skippable[0].length);
+}
+
+// My version
+// function skipSpace(string) {
+//   // Exclude Comments
+//   let regex = /#.*\n/g;
+//   if (regex.test(string)) {
+//     let excluded = string.replace(regex, "");
+//     return excluded;
+//   }
+//   // Exclude White Space
+//   let first = string.search(/\S/);
+//   if (first == -1) return "";
+//   return string.slice(first);
+// }
+
+// console.log(parse("# hello\nx"));
+// → {type: "word", name: "x"}
+
+// console.log(parse("a # one\n   # two\n()"));
+// → {type: "apply",
+//    operator: {type: "word", name: "a"},
+//    args: []}
