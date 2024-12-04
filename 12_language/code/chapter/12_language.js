@@ -86,6 +86,15 @@ function evaluate(expr, scope) {
 
 // ------------- SPECIAL FORMS -------------------
 
+specialForms.define = (args, scope) => {
+  if (args.length != 2 || args[0].type != "word") {
+    throw new SyntaxError("Incorrect use of define");
+  }
+  let value = evaluate(args[1], scope);
+  scope[args[0].name] = value;
+  return value;
+};
+
 specialForms.if = (args, scope) => {
   if (args.length != 3) {
     throw new SyntaxError("Wrong number of args to if");
@@ -117,14 +126,14 @@ specialForms.do = (args, scope) => {
   return value;
 };
 
-specialForms.define = (args, scope) => {
-  if (args.length != 2 || args[0].type != "word") {
-    throw new SyntaxError("Incorrect use of define");
-  }
-  let value = evaluate(args[1], scope);
-  scope[args[0].name] = value;
-  return value;
-};
+// specialForms.define = (args, scope) => {
+//   if (args.length != 2 || args[0].type != "word") {
+//     throw new SyntaxError("Incorrect use of define");
+//   }
+//   let value = evaluate(args[1], scope);
+//   scope[args[0].name] = value;
+//   return value;
+// };
 
 // ------------- THE ENVIROMENT ----------------
 
@@ -176,9 +185,7 @@ specialForms.fun = (args, scope) => {
   };
 };
 
-//---------------------------------------------------
-
-// ------------ EXERCISE 1 ---------------
+// ------------ EXERCISE 1 ------------------
 
 topScope.array = function (...a) {
   return a;
@@ -250,3 +257,48 @@ function skipSpace(string) {
 // → {type: "apply",
 //    operator: {type: "word", name: "a"},
 //    args: []}
+
+// ------------ EXERCISE 4 ---------------
+
+specialForms.set = (args, scope) => {
+  // Ensure the syntax is correct:
+  // args[0] must be a "word" (a variable name), and there should be exactly two arguments.
+  if (args.length != 2 || args[0].type != "word") {
+    throw new SyntaxError("Bad use of set");
+  }
+
+  // Evaluate the second argument (the value to assign) in the current scope.
+  // This ensures that the value is dynamically computed, not just referring to a name.
+  const value = evaluate(args[1], scope);
+
+  // Extract the variable name (the first argument) to be updated.
+  const varName = args[0].name;
+
+  // Iterate through the prototype chain starting with the local scope,
+  // and moving to the global scope.
+  for (
+    let currentScope = scope;
+    currentScope;
+    currentScope = Object.getPrototypeOf(currentScope)
+  ) {
+    // Check if the current scope has the property (variable) to update.
+    if (Object.hasOwn(currentScope, varName)) {
+      currentScope[varName] = value; // Update the property in the current scope
+      return; // Exit once the value is updated
+    }
+  }
+
+  // If we've reached the end of the prototype chain without finding the variable, throw an error.
+  // This indicates that the variable was not defined in any scope.
+  throw new ReferenceError(`Setting undefined variable ${varName}`);
+};
+
+run(`
+do(define(x, 4),
+   define(setx, fun(val, set(x, val))),
+   setx(50),
+   print(x))
+`);
+// → 50
+// run(`set(quux, true)`);
+// → Some kind of ReferenceError
